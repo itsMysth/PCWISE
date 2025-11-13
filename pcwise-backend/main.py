@@ -13,8 +13,8 @@ app = FastAPI()
 
 # CORS configuration
 origins = [
-    "http://localhost:3000",  # React dev
-    "pcwise.vercel.app"  # deployed frontend
+    "http://localhost:3000",        # local dev
+    "https://pcwise.vercel.app"     # deployed frontend (include https!)
 ]
 
 app.add_middleware(
