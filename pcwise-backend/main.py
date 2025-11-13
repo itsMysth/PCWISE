@@ -11,12 +11,17 @@ load_dotenv()
 
 app = FastAPI()
 
-# Allow requests from your React frontend
+# CORS configuration
+origins = [
+    "http://localhost:3000",  # React dev
+    "pcwise.vercel.app"  # deployed frontend
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # change when deployed
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["*"],  # GET, POST, OPTIONS...
     allow_headers=["*"],
 )
 
@@ -34,7 +39,7 @@ def root():
     return {"message": "PCWise Backend Running ✅"}
 
 @app.post("/chat")
-def chat(request: ChatRequest):
+async def chat(request: ChatRequest):
     try:
         # Send message to Gemini NLP API
         response = client.models.generate_content(
@@ -46,7 +51,7 @@ def chat(request: ChatRequest):
         print("Gemini error:", e)
         reply = "Sorry, I couldn't process your request."
 
-    # Store conversation in Supabase
+    # Store conversation in Supabase (async-safe)
     store_message(request.user, request.message, reply)
 
     return {"response": reply}
