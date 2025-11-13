@@ -15,21 +15,33 @@ export default function ChatBox() {
     if (!input.trim()) return;
 
     const userMessage = { sender: "user", text: input };
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setLoading(true);
 
     try {
-      const res = await fetch("https://pcwise.onrender.com/chat", {
+      // Choose backend URL based on environment
+      const BACKEND_URL =
+        process.env.NODE_ENV === "development"
+          ? "http://127.0.0.1:10000/chat" // local dev
+          : "https://pcwise-backend.onrender.com/chat"; // deployed backend
+
+      const res = await fetch(BACKEND_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user: "test_user", message: input })
+        body: JSON.stringify({ user: "test_user", message: input }),
       });
+
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+
       const data = await res.json();
-      setMessages(prev => [...prev, { sender: "bot", text: data.response }]);
+      setMessages((prev) => [...prev, { sender: "bot", text: data.response }]);
     } catch (error) {
       console.error("Error sending message:", error);
-      setMessages(prev => [...prev, { sender: "bot", text: "Oops! Something went wrong." }]);
+      setMessages((prev) => [
+        ...prev,
+        { sender: "bot", text: "Oops! Something went wrong." },
+      ]);
     }
 
     setLoading(false);
