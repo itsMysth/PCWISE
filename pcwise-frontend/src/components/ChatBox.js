@@ -20,12 +20,11 @@ export default function ChatBox() {
     setLoading(true);
 
     try {
-      const res = await fetch("https://pcwise.onrender.com", {
+      const res = await fetch("https://pcwise.onrender.com/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user: "test_user", message: input })
       });
-
       const data = await res.json();
       setMessages(prev => [...prev, { sender: "bot", text: data.response }]);
     } catch (error) {
