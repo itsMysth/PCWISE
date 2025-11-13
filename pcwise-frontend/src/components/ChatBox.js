@@ -24,14 +24,14 @@ export default function ChatBox() {
     const BACKEND_URL =
       process.env.NODE_ENV === "development"
         ? "http://127.0.0.1:10000/chat"
-        : "https://pcwise-backend.onrender.com/chat";
+        : "https://pcwise.onrender.com/chat"; // Render backend URL
 
+    const res = await fetch(BACKEND_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user: "test_user", message: input })
+    });
 
-      const res = await fetch(BACKEND_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user: "test_user", message: input }),
-      });
 
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
 

@@ -12,35 +12,48 @@ load_dotenv()
 
 app = FastAPI(title="PCWise Backend")
 
-# --- CORS Configuration ---
-# Dynamically allow the origin of the request (works with any Vercel subdomain)
-origins = [
-    "http://localhost:3000"  # local dev
-]
-
+# ----------------------
+# CORS Setup
+# ----------------------
+# Allow all origins dynamically (works with any Vercel frontend)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # allow all origins for simplicity
+    allow_origins=["*"],  # For production, you can replace "*" with allowed URLs
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# --- Gemini Client ---
+# ----------------------
+# Gemini Client
+# ----------------------
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=GEMINI_API_KEY)
 
-# --- Request Model ---
+# ----------------------
+# Request Model
+# ----------------------
 class ChatRequest(BaseModel):
     user: str
     message: str
 
-# --- Root Endpoint ---
+# ----------------------
+# Root Endpoint
+# ----------------------
 @app.get("/")
 def root():
     return {"message": "PCWise Backend Running ✅"}
 
-# --- Chat Endpoint ---
+# ----------------------
+# Optional: handle HEAD requests to silence 405 logs
+# ----------------------
+@app.head("/")
+def head_root():
+    return {}
+
+# ----------------------
+# Chat Endpoint
+# ----------------------
 @app.post("/chat")
 async def chat(request: ChatRequest):
     try:
@@ -61,14 +74,3 @@ async def chat(request: ChatRequest):
         print("Supabase error:", e)
 
     return JSONResponse({"response": reply})
-
-# --- Optional: Dynamic CORS Middleware ---
-@app.middleware("http")
-async def dynamic_cors(request: Request, call_next):
-    response = await call_next(request)
-    origin = request.headers.get("origin")
-    if origin:
-        response.headers["Access-Control-Allow-Origin"] = origin
-        response.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type,Authorization"
-    return response
