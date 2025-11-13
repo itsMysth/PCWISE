@@ -21,10 +21,11 @@ export default function ChatBox() {
 
     try {
       // Choose backend URL based on environment
-      const BACKEND_URL =
-        process.env.NODE_ENV === "development"
-          ? "http://127.0.0.1:10000/chat" // local dev
-          : "https://pcwise-backend.onrender.com/chat"; // deployed backend
+    const BACKEND_URL =
+      process.env.NODE_ENV === "development"
+        ? "http://127.0.0.1:10000/chat"
+        : "https://pcwise-backend.onrender.com/chat";
+
 
       const res = await fetch(BACKEND_URL, {
         method: "POST",
