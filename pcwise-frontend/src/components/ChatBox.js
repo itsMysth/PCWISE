@@ -20,7 +20,7 @@ export default function ChatBox() {
     setLoading(true);
 
     try {
-      const res = await fetch("https://pcwise.onrender.com/chat", {
+      const res = await fetch("https://pcwise.onrender.com", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user: "test_user", message: input })
@@ -30,7 +30,7 @@ export default function ChatBox() {
       setMessages(prev => [...prev, { sender: "bot", text: data.response }]);
     } catch (error) {
       console.error("Error sending message:", error);
-      setMessages(prev => [...prev, { sender: "bot", text: "Oops! Something went wrong.." }]);
+      setMessages(prev => [...prev, { sender: "bot", text: "Oops! Something went wrong." }]);
     }
 
     setLoading(false);
