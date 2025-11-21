@@ -1,14 +1,21 @@
-import './App.css';
-import ChatBox from "./components/ChatBox";
+import { useState } from "react";
+import Navbar from "./components/Navbar";
+import Products from "./pages/Products";
+import PCBuilder from "./pages/PCBuilder";
+import Chatbot from "./pages/Chatbot";
 
-function App() {
+export default function App() {
+  const [page, setPage] = useState("products");
+
   return (
-    <div className="App">
-      <h1 className="text-3xl font-bold text-center mt-6">PCWise Chatbot</h1>
-      <ChatBox />
+    <div className="h-screen bg-[#0f1216] text-gray-200 flex flex-col">
+      <Navbar page={page} setPage={setPage} />
+
+      <div className="flex-1 p-4">
+        {page === "products" && <Products />}
+        {page === "pcbuilder" && <PCBuilder />}
+        {page === "chatbot" && <Chatbot />}
+      </div>
     </div>
   );
 }
-
-
-export default App;
