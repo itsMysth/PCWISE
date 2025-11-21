@@ -11,7 +11,10 @@ export default function Products() {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
 
-  // Hardcoded 8 PC part categories
+  // Pagination
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+
   const categories = [
     "All",
     "CPU",
@@ -30,6 +33,10 @@ export default function Products() {
   useEffect(() => {
     applyFilters();
   }, [searchTerm, categoryFilter, products]);
+
+  useEffect(() => {
+    scrollToTop();
+  }, [page]);
 
   async function loadProducts() {
     setLoading(true);
@@ -63,10 +70,20 @@ export default function Products() {
     }
 
     setFilteredProducts(filtered);
+    setPage(1); // Reset to page 1 when filters change
+  }
+
+  function paginatedProducts() {
+    const start = (page - 1) * pageSize;
+    return filteredProducts.slice(start, start + pageSize);
+  }
+
+  function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   return (
-    <div className="text-gray-200 p-4">
+  <div className="text-gray-200 p-4 bg-[#0d1117] min-h-screen">
       <h1 className="text-2xl font-bold mb-4">Products</h1>
 
       {/* Search + Filter */}
@@ -96,8 +113,8 @@ export default function Products() {
       )}
 
       {/* Product Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {filteredProducts.map(product => (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-10">
+        {paginatedProducts().map(product => (
           <div
             key={product.id}
             onClick={() => setSelectedProduct(product)}
@@ -122,12 +139,36 @@ export default function Products() {
         ))}
       </div>
 
+      {/* Pagination */}
+      {filteredProducts.length > pageSize && (
+        <div className="flex justify-center items-center gap-4 mt-8">
+          <button
+            onClick={() => setPage(p => p - 1)}
+            disabled={page === 1}
+            className="px-4 py-2 bg-gray-700 rounded disabled:opacity-30"
+          >
+            Previous
+          </button>
+
+          <span className="text-gray-400">
+            Page {page} of {Math.ceil(filteredProducts.length / pageSize)}
+          </span>
+
+          <button
+            onClick={() => setPage(p => p + 1)}
+            disabled={page >= Math.ceil(filteredProducts.length / pageSize)}
+            className="px-4 py-2 bg-gray-700 rounded disabled:opacity-30"
+          >
+            Next
+          </button>
+        </div>
+      )}
+
       {/* Product Modal */}
       {selectedProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
           <div className="bg-[#1b1f26] rounded-xl w-full max-w-4xl shadow-lg relative flex flex-col md:flex-row h-[80vh] md:items-stretch">
 
-            {/* Close Button */}
             <button
               onClick={() => setSelectedProduct(null)}
               className="absolute top-3 right-3 text-gray-400 hover:text-white text-xl z-10"
@@ -150,7 +191,7 @@ export default function Products() {
               )}
             </div>
 
-            {/* RIGHT - Info + Description */}
+            {/* RIGHT - Info */}
             <div className="md:w-1/2 w-full flex flex-col h-full">
               <div className="p-4">
                 <h2 className="text-xl font-bold mb-2">{selectedProduct.name}</h2>
