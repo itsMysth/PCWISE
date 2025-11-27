@@ -5,12 +5,10 @@ dist/
 
 # Python
 __pycache__/
-.env
 .venv/
 *.pyc
 
 # Misc
 .DS_Store
 
-/pcwise-backend/.env
-/pcwise-frontend/.env
+**/.env
