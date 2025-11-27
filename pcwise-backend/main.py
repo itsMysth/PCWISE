@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Request
+# main.py
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -7,59 +8,55 @@ from dotenv import load_dotenv
 from google import genai
 from utils.supabase_client import store_message
 
-# Load environment variables
+# Load .env variables
 load_dotenv()
 
 app = FastAPI(title="PCWise Backend")
 
-# ----------------------
-# CORS Setup
-# ----------------------
-# Allow all origins dynamically (works with any Vercel frontend)
+# -------------------------
+# CORS (Allow all origins)
+# -------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For production, you can replace "*" with allowed URLs
+    allow_origins=["*"],       # You can restrict later
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ----------------------
+# -------------------------
 # Gemini Client
-# ----------------------
+# -------------------------
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=GEMINI_API_KEY)
 
-# ----------------------
-# Request Model
-# ----------------------
+# -------------------------
+# Pydantic Model
+# -------------------------
 class ChatRequest(BaseModel):
     user: str
     message: str
 
-# ----------------------
-# Root Endpoint
-# ----------------------
+# -------------------------
+# Root endpoints
+# -------------------------
 @app.get("/")
 def root():
     return {"message": "PCWise Backend Running ✅"}
 
-# ----------------------
-# Optional: handle HEAD requests to silence 405 logs
-# ----------------------
 @app.head("/")
-def head_root():
+def root_head():
     return {}
 
-# ----------------------
-# Chat Endpoint
-# ----------------------
+# -------------------------
+# Chatbot Endpoint
+# -------------------------
 @app.post("/chat")
 async def chat(request: ChatRequest):
     try:
-        # Send message to Gemini NLP API
+        # Gemini response
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-2.0-flash",     # You may switch to flash
             contents=request.message
         )
         reply = response.text
@@ -67,7 +64,7 @@ async def chat(request: ChatRequest):
         print("Gemini error:", e)
         reply = "Sorry, I couldn't process your request."
 
-    # Store conversation in Supabase (async-safe)
+    # Store chat to Supabase
     try:
         store_message(request.user, request.message, reply)
     except Exception as e:

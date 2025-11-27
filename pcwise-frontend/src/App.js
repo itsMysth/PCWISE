@@ -1,3 +1,4 @@
+// App.jsx
 import { useState } from "react";
 import Navbar from "./components/Navbar";
 import Products from "./pages/Products";
@@ -20,24 +21,34 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#0f1216] text-gray-200 flex flex-col">
+      {/* Navbar */}
       <Navbar page={page} setPage={setPage} />
 
-      <div className="flex-1 p-4">
+      {/* Main page container */}
+      <div className="flex-1 flex flex-col">
         {page === "products" && (
-          <Products
-            selectedParts={selectedParts}
-            setSelectedParts={setSelectedParts}
-          />
+          <div className="flex-1 overflow-auto p-4">
+            <Products
+              selectedParts={selectedParts}
+              setSelectedParts={setSelectedParts}
+            />
+          </div>
         )}
 
         {page === "pcbuilder" && (
-          <PCBuilder
-            selectedParts={selectedParts}
-            setSelectedParts={setSelectedParts}
-          />
+          <div className="flex-1 overflow-auto p-4">
+            <PCBuilder
+              selectedParts={selectedParts}
+              setSelectedParts={setSelectedParts}
+            />
+          </div>
         )}
 
-        {page === "chatbot" && <Chatbot />}
+        {page === "chatbot" && (
+          <div className="flex-1 flex flex-col p-4">
+            <Chatbot />
+          </div>
+        )}
       </div>
     </div>
   );

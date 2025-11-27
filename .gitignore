@@ -11,3 +11,6 @@ __pycache__/
 
 # Misc
 .DS_Store
+
+/pcwise-backend/.env
+/pcwise-frontend/.env
