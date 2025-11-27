@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import supabase from "../supabaseClient";
 
-export default function Products() {
+export default function Products({ selectedParts, setSelectedParts }) {
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -82,8 +82,126 @@ export default function Products() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function isCompatible(product, selectedParts) {
+    const category = product.category;
+    const specs = product.specs || {};
+
+    const CPU = selectedParts.CPU;
+    const GPU = selectedParts.GPU;
+    const Motherboard = selectedParts.Motherboard;
+    const RAM = selectedParts.RAM;
+    const PSU = selectedParts.PSU;
+    const Case = selectedParts.Case;
+
+    const get = (part, key) => part?.specs?.[key];
+
+    if (category === "CPU" && Motherboard) {
+      if (get(product, "socket") && get(Motherboard, "socket")) {
+        if (get(product, "socket") !== get(Motherboard, "socket")) {
+          return false;
+        }
+      }
+    }
+
+    if (category === "Motherboard" && CPU) {
+      if (get(product, "socket") && get(CPU, "socket")) {
+        if (get(product, "socket") !== get(CPU, "socket")) {
+          return false;
+        }
+      }
+    }
+
+    if (category === "RAM" && Motherboard) {
+      if (get(product, "ram_type") && get(Motherboard, "ram_type")) {
+        if (get(product, "ram_type") !== get(Motherboard, "ram_type")) {
+          return false;
+        }
+      }
+    }
+
+    if (category === "Motherboard" && RAM) {
+      if (get(product, "ram_type") && get(RAM, "ram_type")) {
+        if (get(product, "ram_type") !== get(RAM, "ram_type")) {
+          return false;
+        }
+      }
+    }
+
+    if (category === "GPU" && PSU) {
+      if (get(product, "power_requirement") && get(PSU, "wattage")) {
+        if (get(PSU, "wattage") < get(product, "power_requirement")) {
+          return false;
+        }
+      }
+    }
+
+    if (category === "PSU" && GPU) {
+      if (get(product, "wattage") && get(GPU, "power_requirement")) {
+        if (get(product, "wattage") < get(GPU, "power_requirement")) {
+          return false;
+        }
+      }
+    }
+
+    if (category === "GPU" && Case) {
+      if (get(product, "gpu_length") && get(Case, "max_gpu_length")) {
+        if (get(product, "gpu_length") > get(Case, "max_gpu_length")) {
+          return false;
+        }
+      }
+    }
+
+    if (category === "Case" && GPU) {
+      if (get(product, "max_gpu_length") && get(GPU, "gpu_length")) {
+        if (get(GPU, "gpu_length") > get(product, "max_gpu_length")) {
+          return false;
+        }
+      }
+    }
+
+    const caseFF = get(Case, "supported_form_factors")?.split(",") || [];
+    const prodFF = get(product, "supported_form_factors")?.split(",") || [];
+
+    if (category === "Motherboard" && Case) {
+      if (get(product, "form_factor") && caseFF.length > 0) {
+        if (!caseFF.includes(get(product, "form_factor"))) {
+          return false;
+        }
+      }
+    }
+
+    if (category === "Case" && Motherboard) {
+      if (prodFF.length > 0 && get(Motherboard, "form_factor")) {
+        if (!prodFF.includes(get(Motherboard, "form_factor"))) {
+          return false;
+        }
+      }
+    }
+
+    const casePSU = get(Case, "supported_psu_types")?.split(",") || [];
+    const prodPSU = get(product, "supported_psu_types")?.split(",") || [];
+
+    if (category === "PSU" && Case) {
+      if (get(product, "psu_type") && casePSU.length > 0) {
+        if (!casePSU.includes(get(product, "psu_type"))) {
+          return false;
+        }
+      }
+    }
+
+    if (category === "Case" && PSU) {
+      if (prodPSU.length > 0 && get(PSU, "psu_type")) {
+        if (!prodPSU.includes(get(PSU, "psu_type"))) {
+          return false;
+        }
+      }
+    }
+
+    return true; // ALL GOOD
+  }
+
   return (
-  <div className="text-gray-200 p-4 bg-[#0d1117] min-h-screen">
+    <div className="text-gray-200 p-4 bg-[#0d1117] min-h-screen">
       <h1 className="text-2xl font-bold mb-4">Products</h1>
 
       {/* Search + Filter */}
@@ -113,7 +231,7 @@ export default function Products() {
       )}
 
       {/* Product Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-10">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-10">
         {paginatedProducts().map(product => (
           <div
             key={product.id}
@@ -197,6 +315,63 @@ export default function Products() {
                 <h2 className="text-xl font-bold mb-2">{selectedProduct.name}</h2>
                 <p className="text-gray-400 text-sm mb-2">{selectedProduct.category}</p>
                 <p className="text-blue-400 text-lg font-semibold">₱{selectedProduct.price}</p>
+
+            {/* ADD TO BUILD BUTTON */}
+            <button
+              onClick={() => {
+                const cat = selectedProduct.category;
+
+                // Compatibility checks
+                if (cat === "CPU") {
+                  const motherboard = selectedParts.Motherboard;
+                  if (motherboard && selectedProduct.specs.socket !== motherboard.specs.socket) {
+                    alert("Incompatible CPU socket with selected Motherboard!");
+                    return;
+                  }
+                }
+
+                if (cat === "Motherboard") {
+                  const cpu = selectedParts.CPU;
+                  if (cpu && cpu.specs.socket !== selectedProduct.specs.socket) {
+                    alert("Incompatible Motherboard socket with selected CPU!");
+                    return;
+                  }
+
+                  const ram = selectedParts.RAM;
+                  if (ram && ram.specs.ram_type !== selectedProduct.specs.ram_type) {
+                    alert("Incompatible RAM type with selected Motherboard!");
+                    return;
+                  }
+                }
+
+                if (cat === "RAM") {
+                  const motherboard = selectedParts.Motherboard;
+                  if (motherboard && selectedProduct.specs.ram_type !== motherboard.specs.ram_type) {
+                    alert("Incompatible RAM type with selected Motherboard!");
+                    return;
+                  }
+                }
+
+                if (cat === "GPU") {
+                  const psu = selectedParts.PSU;
+                  if (psu && selectedProduct.specs.power > psu.specs.power) {
+                    alert("Selected GPU requires more power than your PSU provides!");
+                    return;
+                  }
+                }
+
+                // Add part if compatible
+                setSelectedParts(prev => ({
+                  ...prev,
+                  [cat]: selectedProduct
+                }));
+                alert(`${cat} added to your build!`);
+              }}
+              className="mt-3 w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-center font-semibold"
+            >
+              Add to PC Build
+            </button>
+            
               </div>
 
               <div className="flex-1 overflow-y-auto overflow-x-hidden bg-[#11151b] p-4 rounded-tr-xl rounded-br-xl break-words whitespace-normal text-sm text-gray-300">
@@ -206,6 +381,7 @@ export default function Products() {
           </div>
         </div>
       )}
+
     </div>
   );
 }
