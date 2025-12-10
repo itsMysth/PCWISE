@@ -4,6 +4,7 @@ import Navbar from "./components/Navbar";
 import Products from "./pages/Products";
 import PCBuilder from "./pages/PCBuilder";
 import Chatbot from "./pages/Chatbot";
+import { Toaster } from "react-hot-toast";
 
 export default function App() {
   const [page, setPage] = useState("products");
@@ -17,10 +18,14 @@ export default function App() {
     Storage: null,
     PSU: null,
     Case: null,
+    Cooler: null,
   });
 
   return (
     <div className="min-h-screen bg-[#0f1216] text-gray-200 flex flex-col">
+      {/* Toast Popup System */}
+      <Toaster position="top-center" />
+
       {/* Navbar */}
       <Navbar page={page} setPage={setPage} />
 

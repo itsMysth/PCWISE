@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import supabase from "../supabaseClient";
 
 export default function Products({ selectedParts, setSelectedParts }) {
@@ -7,11 +8,9 @@ export default function Products({ selectedParts, setSelectedParts }) {
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
-  // Filters
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
 
-  // Pagination
   const [page, setPage] = useState(1);
   const pageSize = 20;
 
@@ -23,7 +22,8 @@ export default function Products({ selectedParts, setSelectedParts }) {
     "RAM",
     "Storage",
     "PSU",
-    "Case"
+    "Case",
+    "Cooler"
   ];
 
   useEffect(() => {
@@ -35,12 +35,11 @@ export default function Products({ selectedParts, setSelectedParts }) {
   }, [searchTerm, categoryFilter, products]);
 
   useEffect(() => {
-    scrollToTop();
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, [page]);
 
   async function loadProducts() {
     setLoading(true);
-
     const { data, error } = await supabase
       .from("products")
       .select("*")
@@ -70,7 +69,7 @@ export default function Products({ selectedParts, setSelectedParts }) {
     }
 
     setFilteredProducts(filtered);
-    setPage(1); // Reset to page 1 when filters change
+    setPage(1);
   }
 
   function paginatedProducts() {
@@ -78,127 +77,74 @@ export default function Products({ selectedParts, setSelectedParts }) {
     return filteredProducts.slice(start, start + pageSize);
   }
 
-  function scrollToTop() {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  function isCompatible(product, selectedParts) {
-    const category = product.category;
-    const specs = product.specs || {};
-
-    const CPU = selectedParts.CPU;
-    const GPU = selectedParts.GPU;
-    const Motherboard = selectedParts.Motherboard;
-    const RAM = selectedParts.RAM;
-    const PSU = selectedParts.PSU;
-    const Case = selectedParts.Case;
-
+  function isCompatible(product) {
+    const cat = product.category;
     const get = (part, key) => part?.specs?.[key];
 
-    if (category === "CPU" && Motherboard) {
-      if (get(product, "socket") && get(Motherboard, "socket")) {
-        if (get(product, "socket") !== get(Motherboard, "socket")) {
-          return false;
-        }
-      }
+    const CPU = selectedParts.CPU;
+    const Motherboard = selectedParts.Motherboard;
+    const RAM = selectedParts.RAM;
+    const GPU = selectedParts.GPU;
+    const PSU = selectedParts.PSU;
+    const Case = selectedParts.Case;
+    const Cooler = selectedParts.Cooler;
+    const Storage = selectedParts.Storage;
+
+    // CPU <-> Motherboard
+    if (cat === "CPU" && Motherboard) {
+      if (get(product, "socket") !== get(Motherboard, "socket")) return false;
+    }
+    if (cat === "Motherboard" && CPU) {
+      if (get(product, "socket") !== get(CPU, "socket")) return false;
     }
 
-    if (category === "Motherboard" && CPU) {
+    // RAM <-> Motherboard
+    if (cat === "RAM" && Motherboard) {
+      if (get(product, "ram_type") !== get(Motherboard, "ram_type")) return false;
+    }
+    if (cat === "Motherboard" && RAM) {
+      if (get(product, "ram_type") !== get(RAM, "ram_type")) return false;
+    }
+
+    // GPU <-> PSU & Case
+    if (cat === "GPU" && PSU) {
+      if (get(GPU, "power") > get(PSU, "power")) return false;
+    }
+    if (cat === "PSU" && GPU) {
+      if (get(PSU, "power") < get(GPU, "power")) return false;
+    }
+    if (cat === "GPU" && Case) {
+      if (get(GPU, "gpu_length") > get(Case, "max_gpu_length")) return false;
+    }
+    if (cat === "Case" && GPU) {
+      if (get(GPU, "gpu_length") > get(Case, "max_gpu_length")) return false;
+    }
+
+    // Cooler <-> CPU
+    if (cat === "Cooler" && CPU) {
       if (get(product, "socket") && get(CPU, "socket")) {
-        if (get(product, "socket") !== get(CPU, "socket")) {
-          return false;
-        }
+        if (get(product, "socket") !== get(CPU, "socket")) return false;
       }
     }
 
-    if (category === "RAM" && Motherboard) {
-      if (get(product, "ram_type") && get(Motherboard, "ram_type")) {
-        if (get(product, "ram_type") !== get(Motherboard, "ram_type")) {
-          return false;
-        }
-      }
+    // Storage <-> Motherboard
+    if (cat === "Storage" && Motherboard) {
+      const storageType = get(product, "type"); // e.g., "SATA" or "NVMe"
+      let mbSupports = get(Motherboard, "storage_type") || [];
+      if (typeof mbSupports === "string") mbSupports = JSON.parse(mbSupports);
+      if (!mbSupports.includes(storageType)) return false;
+    }
+    if (cat === "Motherboard" && Storage) {
+      let mbSupports = get(product, "storage_type") || [];
+      if (typeof mbSupports === "string") mbSupports = JSON.parse(mbSupports);
+      const storageType = get(Storage, "type");
+      if (!mbSupports.includes(storageType)) return false;
     }
 
-    if (category === "Motherboard" && RAM) {
-      if (get(product, "ram_type") && get(RAM, "ram_type")) {
-        if (get(product, "ram_type") !== get(RAM, "ram_type")) {
-          return false;
-        }
-      }
-    }
-
-    if (category === "GPU" && PSU) {
-      if (get(product, "power_requirement") && get(PSU, "wattage")) {
-        if (get(PSU, "wattage") < get(product, "power_requirement")) {
-          return false;
-        }
-      }
-    }
-
-    if (category === "PSU" && GPU) {
-      if (get(product, "wattage") && get(GPU, "power_requirement")) {
-        if (get(product, "wattage") < get(GPU, "power_requirement")) {
-          return false;
-        }
-      }
-    }
-
-    if (category === "GPU" && Case) {
-      if (get(product, "gpu_length") && get(Case, "max_gpu_length")) {
-        if (get(product, "gpu_length") > get(Case, "max_gpu_length")) {
-          return false;
-        }
-      }
-    }
-
-    if (category === "Case" && GPU) {
-      if (get(product, "max_gpu_length") && get(GPU, "gpu_length")) {
-        if (get(GPU, "gpu_length") > get(product, "max_gpu_length")) {
-          return false;
-        }
-      }
-    }
-
-    const caseFF = get(Case, "supported_form_factors")?.split(",") || [];
-    const prodFF = get(product, "supported_form_factors")?.split(",") || [];
-
-    if (category === "Motherboard" && Case) {
-      if (get(product, "form_factor") && caseFF.length > 0) {
-        if (!caseFF.includes(get(product, "form_factor"))) {
-          return false;
-        }
-      }
-    }
-
-    if (category === "Case" && Motherboard) {
-      if (prodFF.length > 0 && get(Motherboard, "form_factor")) {
-        if (!prodFF.includes(get(Motherboard, "form_factor"))) {
-          return false;
-        }
-      }
-    }
-
-    const casePSU = get(Case, "supported_psu_types")?.split(",") || [];
-    const prodPSU = get(product, "supported_psu_types")?.split(",") || [];
-
-    if (category === "PSU" && Case) {
-      if (get(product, "psu_type") && casePSU.length > 0) {
-        if (!casePSU.includes(get(product, "psu_type"))) {
-          return false;
-        }
-      }
-    }
-
-    if (category === "Case" && PSU) {
-      if (prodPSU.length > 0 && get(PSU, "psu_type")) {
-        if (!prodPSU.includes(get(PSU, "psu_type"))) {
-          return false;
-        }
-      }
-    }
-
-    return true; // ALL GOOD
+    return true;
   }
+
+
 
   return (
     <div className="text-gray-200 p-4 bg-[#0d1117] min-h-screen">
@@ -211,13 +157,13 @@ export default function Products({ selectedParts, setSelectedParts }) {
           placeholder="Search by name..."
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
-          className="flex-1 p-2 rounded-lg bg-[#161b22] border border-gray-600 text-gray-200 focus:outline-none"
+          className="flex-1 p-2 rounded-lg bg-[#161b22] border border-gray-600 text-gray-200"
         />
 
         <select
           value={categoryFilter}
           onChange={e => setCategoryFilter(e.target.value)}
-          className="p-2 rounded-lg bg-[#161b22] border border-gray-600 text-gray-200 focus:outline-none"
+          className="p-2 rounded-lg bg-[#161b22] border border-gray-600 text-gray-200"
         >
           {categories.map(cat => (
             <option key={cat} value={cat}>{cat}</option>
@@ -282,19 +228,17 @@ export default function Products({ selectedParts, setSelectedParts }) {
         </div>
       )}
 
-      {/* Product Modal */}
+      {/* Modal */}
       {selectedProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1b1f26] rounded-xl w-full max-w-4xl shadow-lg relative flex flex-col md:flex-row h-[80vh] md:items-stretch">
-
+          <div className="bg-[#1b1f26] rounded-xl w-full max-w-4xl shadow-lg relative flex flex-col md:flex-row h-[80vh]">
             <button
               onClick={() => setSelectedProduct(null)}
-              className="absolute top-3 right-3 text-gray-400 hover:text-white text-xl z-10"
+              className="absolute top-3 right-3 text-gray-400 hover:text-white text-xl"
             >
               ✕
             </button>
 
-            {/* LEFT - Image */}
             <div className="md:w-1/2 w-full h-64 md:h-full flex items-center justify-center">
               {selectedProduct.image_url ? (
                 <img
@@ -309,79 +253,42 @@ export default function Products({ selectedParts, setSelectedParts }) {
               )}
             </div>
 
-            {/* RIGHT - Info */}
             <div className="md:w-1/2 w-full flex flex-col h-full">
               <div className="p-4">
                 <h2 className="text-xl font-bold mb-2">{selectedProduct.name}</h2>
                 <p className="text-gray-400 text-sm mb-2">{selectedProduct.category}</p>
                 <p className="text-blue-400 text-lg font-semibold">₱{selectedProduct.price}</p>
 
-            {/* ADD TO BUILD BUTTON */}
-            <button
-              onClick={() => {
-                const cat = selectedProduct.category;
+                <button
+                  onClick={() => {
+                    const cat = selectedProduct.category;
 
-                // Compatibility checks
-                if (cat === "CPU") {
-                  const motherboard = selectedParts.Motherboard;
-                  if (motherboard && selectedProduct.specs.socket !== motherboard.specs.socket) {
-                    alert("Incompatible CPU socket with selected Motherboard!");
-                    return;
-                  }
-                }
+                    if (!isCompatible(selectedProduct)) {
+                      toast.error("This part is not compatible with your build", { position: "top-center" });
+                      return;
+                    }
 
-                if (cat === "Motherboard") {
-                  const cpu = selectedParts.CPU;
-                  if (cpu && cpu.specs.socket !== selectedProduct.specs.socket) {
-                    alert("Incompatible Motherboard socket with selected CPU!");
-                    return;
-                  }
+                    setSelectedParts(prev => ({
+                      ...prev,
+                      [cat]: selectedProduct
+                    }));
 
-                  const ram = selectedParts.RAM;
-                  if (ram && ram.specs.ram_type !== selectedProduct.specs.ram_type) {
-                    alert("Incompatible RAM type with selected Motherboard!");
-                    return;
-                  }
-                }
-
-                if (cat === "RAM") {
-                  const motherboard = selectedParts.Motherboard;
-                  if (motherboard && selectedProduct.specs.ram_type !== motherboard.specs.ram_type) {
-                    alert("Incompatible RAM type with selected Motherboard!");
-                    return;
-                  }
-                }
-
-                if (cat === "GPU") {
-                  const psu = selectedParts.PSU;
-                  if (psu && selectedProduct.specs.power > psu.specs.power) {
-                    alert("Selected GPU requires more power than your PSU provides!");
-                    return;
-                  }
-                }
-
-                // Add part if compatible
-                setSelectedParts(prev => ({
-                  ...prev,
-                  [cat]: selectedProduct
-                }));
-                alert(`${cat} added to your build!`);
-              }}
-              className="mt-3 w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-center font-semibold"
-            >
-              Add to PC Build
-            </button>
-            
+                    toast.success(`${cat} added to your build`, { position: "top-center" });
+                    setSelectedProduct(null);
+                  }}
+                  className="mt-3 w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold"
+                >
+                  Add to PC Build
+                </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto overflow-x-hidden bg-[#11151b] p-4 rounded-tr-xl rounded-br-xl break-words whitespace-normal text-sm text-gray-300">
+              <div className="flex-1 overflow-y-auto bg-[#11151b] p-4 rounded-tr-xl rounded-br-xl break-words text-sm text-gray-300">
                 {selectedProduct.description || "No description available."}
               </div>
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }
