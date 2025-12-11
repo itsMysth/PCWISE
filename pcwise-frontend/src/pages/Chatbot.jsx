@@ -24,8 +24,9 @@ export default function Chatbot() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/chat", {
-        // Replace with your Vercel backend URL when live
+      const API_URL = process.env.REACT_APP_API_URL;
+
+      const res = await fetch(`${API_URL}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -33,6 +34,7 @@ export default function Chatbot() {
           message: userMessage,
         }),
       });
+
 
       const data = await res.json();
 
