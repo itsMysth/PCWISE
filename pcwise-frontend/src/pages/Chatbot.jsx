@@ -1,105 +1,118 @@
-// Chatbot.jsx
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
-export default function Chatbot() {
-  const [messages, setMessages] = useState([
-    { sender: "bot", text: "Hello! Ask me anything about PC parts." },
-  ]);
-
-  const [input, setInput] = useState("");
+export default function ChatBox() {
+  const [messages, setMessages] = useState([]);
+  const [userMessage, setUserMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Reference the main messages container
+  const messagesContainerRef = useRef(null);
+  const API_URL = process.env.REACT_APP_API_URL;
+
+  // Scroll messages container to the bottom when new messages are added
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (container) {
+      // Set scrollTop to scrollHeight to reliably scroll to the bottom of the content
+      container.scrollTop = container.scrollHeight;
+    }
+  }, [messages, loading]);
+
   const sendMessage = async () => {
-    if (!input.trim() || loading) return;
+    if (!userMessage.trim()) return;
 
-    const userMessage = input;
-    setInput("");
-    
-    // Push user's message
-    setMessages((prev) => [...prev, { sender: "user", text: userMessage }]);
+    const currentMessage = userMessage; 
 
-    // Placeholder bot message
-    const index = messages.length + 1;
-    setMessages((prev) => [...prev, { sender: "bot", text: "Processing..." }]);
+    setMessages((prev) => [...prev, { sender: "user", content: currentMessage }]);
+    setUserMessage("");
     setLoading(true);
 
     try {
-      const API_URL = process.env.REACT_APP_API_URL;
+      if (!API_URL) {
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          setMessages((prev) => [...prev, { sender: "ai", content: `Echo: ${currentMessage}. This is a very long message to ensure scrolling works. You should now be able to scroll up to access older messages, but the header and input remain fixed on the screen.` }]);
+      } else {
+        const res = await fetch(`${API_URL}/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user: "test-user", message: currentMessage }),
+        });
 
-      const res = await fetch(`${API_URL}/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user: "test-user",
-          message: userMessage,
-        }),
-      });
-
-
-      const data = await res.json();
-
-      // Replace temporary “Processing…” message
-      setMessages((prev) =>
-        prev.map((msg, i) =>
-          i === index ? { sender: "bot", text: data.response } : msg
-        )
-      );
-    } catch (error) {
-      console.error(error);
-      setMessages((prev) =>
-        prev.map((msg, i) =>
-          i === index
-            ? { sender: "bot", text: "Error: backend connection failed." }
-            : msg
-        )
-      );
+        const data = await res.json();
+        setMessages((prev) => [...prev, { sender: "ai", content: data.response }]);
+      }
+    } catch (err) {
+      console.error("Chat API Error:", err);
+      setMessages((prev) => [
+        ...prev,
+        { sender: "ai", content: "Error connecting to server." },
+      ]);
     }
 
     setLoading(false);
   };
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Chat window */}
-      <div className="flex-1 overflow-auto p-4 space-y-3 bg-[#13171c] rounded-xl">
-        {messages.map((m, i) => (
-          <div
-            key={i}
-            className={`flex ${m.sender === "user" ? "justify-end" : ""}`}
-          >
-            <div
-              className={`px-4 py-2 rounded-xl max-w-xs text-sm ${
-                m.sender === "user"
-                  ? "bg-blue-600 text-white"
-                  : "bg-[#1d232c] text-gray-200"
-              }`}
-            >
-              {m.text}
+    // OUTER CONTAINER: Fills the full space, centers its content
+    <div className="flex justify-center h-full w-full bg-[#0f1216]">
+        
+        {/* INNER CHAT WINDOW: Fixed-width, fixed-height, and handles internal Flexbox layout */}
+        <div className="flex flex-col h-full w-full max-w-md rounded-xl shadow-lg">
+            
+            {/* Header: Fixed height */}
+            <div className="flex-none h-12 flex items-center justify-center border-b border-gray-700 text-lg font-bold">
+              AI Chat
             </div>
-          </div>
-        ))}
-      </div>
 
-      {/* Input area */}
-      <div className="mt-3 flex gap-2">
-        <input
-          className="flex-1 bg-[#1a1f25] border border-gray-600 rounded-lg px-3 py-2 text-gray-100"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-          placeholder="Ask about PC parts..."
-        />
+            {/* Messages Area: THE SCROLLING SECTION */}
+            <div 
+              ref={messagesContainerRef}
+              // ⭐ CRITICAL FIX: Removed justify-end
+              className="flex-1 flex flex-col p-2 gap-2 overflow-y-auto h-0"
+            >
+              {messages.map((msg, i) => (
+                <div
+                  key={i}
+                  className={`max-w-[70%] p-2 rounded-xl break-words text-sm ${
+                    msg.sender === "user"
+                      ? "bg-blue-600 text-white ml-auto"
+                      : "bg-[#1a1f25] text-gray-200 mr-auto"
+                  }`}
+                >
+                  {msg.content}
+                </div>
+              ))}
 
-        <button
-          onClick={sendMessage}
-          disabled={loading}
-          className={`px-4 py-2 rounded-lg text-white ${
-            loading ? "bg-gray-500" : "bg-blue-600"
-          }`}
-        >
-          Send
-        </button>
-      </div>
+              {loading && (
+                <div className="max-w-[70%] p-2 rounded-xl bg-[#1a1f25] text-gray-400 mr-auto">
+                  Typing...
+                </div>
+              )}
+            </div>
+
+            {/* Input Area: Fixed height */}
+            <div className="flex-none flex gap-2 p-2 h-16 border-t border-gray-700 bg-[#11151b]">
+              <textarea
+                className="flex-1 p-2 rounded-xl bg-[#1a1f25] border border-gray-700 text-gray-200 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Type your message..."
+                value={userMessage}
+                onChange={(e) => setUserMessage(e.target.value)}
+                rows={1}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
+              />
+              <button
+                onClick={sendMessage}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-semibold"
+              >
+                Send
+              </button>
+            </div>
+        </div>
     </div>
   );
 }

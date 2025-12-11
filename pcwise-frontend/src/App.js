@@ -1,4 +1,4 @@
-// App.jsx
+// App.jsx (Final Definitive Scroll-Lock Fix)
 import { useState } from "react";
 import Navbar from "./components/Navbar";
 import Products from "./pages/Products";
@@ -7,9 +7,8 @@ import Chatbot from "./pages/Chatbot";
 import { Toaster } from "react-hot-toast";
 
 export default function App() {
-  const [page, setPage] = useState("products");
+  const [page, setPage] = useState("chatbot"); // Set to chatbot for easy testing
 
-  // ⭐ Shared PC Builder selected parts
   const [selectedParts, setSelectedParts] = useState({
     CPU: null,
     GPU: null,
@@ -22,17 +21,25 @@ export default function App() {
   });
 
   return (
-    <div className="min-h-screen bg-[#0f1216] text-gray-200 flex flex-col">
+    // 1. MAIN CONTAINER: 
+    // - h-screen: Must use full viewport height.
+    // - overflow-hidden: CRITICAL! This locks the scrollbar for the entire page.
+    <div className="h-screen overflow-hidden bg-[#0f1216] text-gray-200 flex flex-col">
+      
       {/* Toast Popup System */}
       <Toaster position="top-center" />
 
-      {/* Navbar */}
+      {/* Navbar: Remains fixed at the top */}
       <Navbar page={page} setPage={setPage} />
 
-      {/* Main page container */}
-      <div className="flex-1 flex flex-col">
+      {/* 2. MAIN PAGE CONTENT AREA: This section takes all remaining height. */}
+      {/* If any page needs to scroll (Products/PCBuilder), the scrollbar will be here. */}
+      <div className="flex-1 flex flex-col overflow-y-auto"> 
+        
+        {/* PRODUCTS PAGE: No longer manages its own scrollbar */}
         {page === "products" && (
-          <div className="flex-1 overflow-auto p-4">
+          // NO overflow-auto/hidden here. The parent div handles the scrolling.
+          <div className="flex-1 p-4 bg-[#0f1216]"> 
             <Products
               selectedParts={selectedParts}
               setSelectedParts={setSelectedParts}
@@ -40,8 +47,10 @@ export default function App() {
           </div>
         )}
 
+        {/* PC BUILDER PAGE: No longer manages its own scrollbar */}
         {page === "pcbuilder" && (
-          <div className="flex-1 overflow-auto p-4">
+          // NO overflow-auto/hidden here. The parent div handles the scrolling.
+          <div className="flex-1 p-4 bg-[#0f1216]">
             <PCBuilder
               selectedParts={selectedParts}
               setSelectedParts={setSelectedParts}
@@ -49,8 +58,11 @@ export default function App() {
           </div>
         )}
 
+        {/* CHATBOT PAGE: CRITICAL ISOLATION */}
         {page === "chatbot" && (
-          <div className="flex-1 flex flex-col p-4">
+          // CRITICAL: We need this wrapper to be completely non-scrolling. 
+          // The ChatBox component itself handles the internal scrolling.
+          <div className="flex-1 flex flex-col overflow-hidden"> 
             <Chatbot />
           </div>
         )}

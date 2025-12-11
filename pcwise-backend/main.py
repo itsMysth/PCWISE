@@ -5,8 +5,6 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import os
 from dotenv import load_dotenv
-from google import genai
-from utils.supabase_client import store_message
 
 # Load .env variables
 load_dotenv()
@@ -23,12 +21,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# -------------------------
-# Gemini Client
-# -------------------------
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-client = genai.Client(api_key=GEMINI_API_KEY)
 
 # -------------------------
 # Pydantic Model
@@ -53,10 +45,31 @@ def root_head():
 # -------------------------
 @app.post("/chat")
 async def chat(request: ChatRequest):
+    # Import Gemini here to prevent startup hanging
     try:
-        # Gemini response
+        from google import genai
+    except ImportError:
+        return JSONResponse(
+            {"response": "Gemini library not installed."}, status_code=500
+        )
+
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    if not GEMINI_API_KEY:
+        return JSONResponse(
+            {"response": "Gemini API key not set in environment variables."}, status_code=500
+        )
+
+    try:
+        client = genai.Client(api_key=GEMINI_API_KEY)
+    except Exception as e:
+        print("Error initializing Gemini client:", e)
+        return JSONResponse(
+            {"response": "Error initializing AI client."}, status_code=500
+        )
+
+    try:
         response = client.models.generate_content(
-            model="gemini-2.0-flash",     # You may switch to flash
+            model="gemini-2.5-flash-lite",
             contents=request.message
         )
         reply = response.text
@@ -64,10 +77,4 @@ async def chat(request: ChatRequest):
         print("Gemini error:", e)
         reply = "Sorry, I couldn't process your request."
 
-    # Store chat to Supabase
-    try:
-        store_message(request.user, request.message, reply)
-    except Exception as e:
-        print("Supabase error:", e)
-
-    return JSONResponse({"response": reply})
+    return {"response": reply}
