@@ -40,9 +40,10 @@ export default function Products({ selectedParts, setSelectedParts }) {
 
   async function loadProducts() {
     setLoading(true);
+    // 🗑️ PRICE REMOVAL 1: Only select necessary fields (excluding 'price')
     const { data, error } = await supabase
       .from("products")
-      .select("*")
+      .select("id, name, category, image_url, description, created_at, specs")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -107,6 +108,7 @@ export default function Products({ selectedParts, setSelectedParts }) {
     }
 
     // GPU <-> PSU & Case
+    // ⚠️ NOTE: Power checks based on specs.power are still here. This is good!
     if (cat === "GPU" && PSU) {
       if (get(GPU, "power") > get(PSU, "power")) return false;
     }
@@ -150,7 +152,7 @@ export default function Products({ selectedParts, setSelectedParts }) {
     <div className="text-gray-200 p-4 bg-[#0d1117] min-h-screen">
       <h1 className="text-2xl font-bold mb-4">Products</h1>
 
-      {/* Search + Filter */}
+      {/* Search + Filter UI */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <input
           type="text"
@@ -197,7 +199,8 @@ export default function Products({ selectedParts, setSelectedParts }) {
             )}
 
             <p className="font-semibold text-sm">{product.name}</p>
-            <p className="text-blue-400 text-sm">₱{product.price}</p>
+            {/* 🗑️ PRICE REMOVAL 2: Remove price display from grid item */}
+            {/* <p className="text-blue-400 text-sm">₱{product.price}</p> */}
             <p className="text-xs text-gray-400 mt-1">{product.category}</p>
           </div>
         ))}
@@ -257,7 +260,8 @@ export default function Products({ selectedParts, setSelectedParts }) {
               <div className="p-4">
                 <h2 className="text-xl font-bold mb-2">{selectedProduct.name}</h2>
                 <p className="text-gray-400 text-sm mb-2">{selectedProduct.category}</p>
-                <p className="text-blue-400 text-lg font-semibold">₱{selectedProduct.price}</p>
+                {/* 🗑️ PRICE REMOVAL 3: Remove price display from modal */}
+                {/* <p className="text-blue-400 text-lg font-semibold">₱{selectedProduct.price}</p> */}
 
                 <button
                   onClick={() => {
